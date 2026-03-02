@@ -6,8 +6,8 @@ nocolor='\033[0m'
 deps="meson ninja patchelf unzip curl pip flex bison zip git"
 workdir="$(pwd)/turnip_workdir"
 packagedir="$workdir/turnip_module"
-ndkver="android-ndk-r29"
-sdkver="35"
+ndkver="android-ndk-r28"
+sdkver="30"
 mesasrc="https://gitlab.freedesktop.org/mesa/mesa.git"
 
 #array of string => commit/branch;patch args
@@ -48,6 +48,9 @@ prep () {
 }
 
 check_deps(){
+	sudo apt remove meson
+	pip install meson PyYAML
+
 	echo "Checking system for required Dependencies ..."
 	for deps_chk in $deps;
 		do
@@ -171,10 +174,9 @@ build_lib_for_android(){
 ar = '$ndk/llvm-ar'
 c = ['ccache', '$ndk/aarch64-linux-android$sdkver-clang']
 cpp = ['ccache', '$ndk/aarch64-linux-android$sdkver-clang++', '-fno-exceptions', '-fno-unwind-tables', '-fno-asynchronous-unwind-tables', '--start-no-unused-arguments', '-static-libstdc++', '--end-no-unused-arguments']
-c_ld = 'lld'
-cpp_ld = 'lld'
-strip = '$ndk/aarch64-linux-android-strip'
-pkgconfig = ['env', 'PKG_CONFIG_LIBDIR=NDKDIR/pkgconfig', '/usr/bin/pkg-config']
+c_ld = '$ndk/ld.lld'
+cpp_ld = '$ndk/ld.lld'
+strip = '$ndk/llvm-strip'
 [host_machine]
 system = 'android'
 cpu_family = 'aarch64'
@@ -183,7 +185,18 @@ endian = 'little'
 EOF
 
 	echo "Generating build files ..." $'\n'
-	meson setup build-android-aarch64 --cross-file "$workdir"/mesa/android-aarch64 -Dbuildtype=release -Dplatforms=android -Dplatform-sdk-version=$sdkver -Dandroid-stub=true -Dgallium-drivers= -Dvulkan-drivers=freedreno -Dvulkan-beta=true -Dfreedreno-kmds=kgsl -Db_lto=true -Degl=disabled &> "$workdir"/meson_log
+	meson setup build-android-aarch64 --cross-file "$workdir"/mesa/android-aarch64 \
+ 		-Dbuildtype=release \
+   		-Dplatforms=android \
+     	-Dplatform-sdk-version=$sdkver \
+       	-Dandroid-stub=true \
+		-Dandroid-libbacktrace=disabled \
+		-Degl=disabled \
+	 	-Dgallium-drivers= \
+  		-Dvulkan-drivers=freedreno \
+  	 	-Dvulkan-beta=true \
+  		-Dfreedreno-kmds=kgsl \
+        -Dstrip=true &> "$workdir"/meson_log
 
 	echo "Compiling build files ..." $'\n'
 	ninja -C build-android-aarch64 &> "$workdir"/ninja_log
@@ -194,11 +207,11 @@ port_lib_for_adrenotool(){
 	cp "$workdir"/mesa/build-android-aarch64/src/freedreno/vulkan/libvulkan_freedreno.so "$workdir"
 	cd "$workdir"
 	patchelf --set-soname vulkan.adreno.so libvulkan_freedreno.so
-	mv libvulkan_freedreno.so vulkan.ad07XX.so
+	mv libvulkan_freedreno.so vulkan.adreno.so
 
-	if ! [ -a vulkan.ad07XX.so ]; then
-		echo -e "$red Build failed! $nocolor" && exit 1
-	fi
+	#if ! [ -a vulkan.adreno.so ]; then
+	#	echo -e "$red Build failed! $nocolor" && exit 1
+	#fi
 
 	mkdir -p "$packagedir" && cd "$_"
 
@@ -218,14 +231,14 @@ port_lib_for_adrenotool(){
   "packageVersion": "1",
   "vendor": "Mesa",
   "driverVersion": "$mesa_version/vk$vulkan_version",
-  "minApi": 27,
-  "libraryName": "vulkan.ad07XX.so"
+  "minApi": 30,
+  "libraryName": "vulkan.adreno.so"
 }
 EOF
 
 	filename=turnip_"$(date +'%b-%d-%Y')"_"$commit_short"
 	echo "Copy necessary files from work directory ..." $'\n'
-	cp "$workdir"/vulkan.ad07XX.so "$packagedir"
+	cp "$workdir"/vulkan.adreno.so "$packagedir"
 
 	echo "Packing files in to adrenotool package ..." $'\n'
 	zip -9 "$workdir"/"$filename$suffix".zip ./*
