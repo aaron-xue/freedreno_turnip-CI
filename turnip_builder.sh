@@ -207,9 +207,9 @@ port_lib_for_adrenotool(){
 	cp "$workdir"/mesa/build-android-aarch64/src/freedreno/vulkan/libvulkan_freedreno.so "$workdir"
 	cd "$workdir"
 	patchelf --set-soname vulkan.adreno.so libvulkan_freedreno.so
-	mv libvulkan_freedreno.so vulkan.adreno.so
+	mv libvulkan_freedreno.so vulkan.ad07XX.so
 
-	#if ! [ -a vulkan.adreno.so ]; then
+	#if ! [ -a vulkan.ad07XX.so ]; then
 	#	echo -e "$red Build failed! $nocolor" && exit 1
 	#fi
 
@@ -232,13 +232,13 @@ port_lib_for_adrenotool(){
   "vendor": "Mesa",
   "driverVersion": "$mesa_version/vk$vulkan_version",
   "minApi": 30,
-  "libraryName": "vulkan.adreno.so"
+  "libraryName": "vulkan.ad07XX.so"
 }
 EOF
 
 	filename=turnip_"$(date +'%b-%d-%Y')"_"$commit_short"
 	echo "Copy necessary files from work directory ..." $'\n'
-	cp "$workdir"/vulkan.adreno.so "$packagedir"
+	cp "$workdir"/vulkan.ad07XX.so "$packagedir"
 
 	echo "Packing files in to adrenotool package ..." $'\n'
 	zip -9 "$workdir"/"$filename$suffix".zip ./*
