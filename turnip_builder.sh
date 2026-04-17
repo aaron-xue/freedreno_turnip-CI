@@ -230,7 +230,7 @@ port_lib_for_adrenotool(){
   "author": "mesa",
   "packageVersion": "1",
   "vendor": "Mesa",
-  "driverVersion": "$mesa_version/vk$vulkan_version",
+  "driverVersion": "Vulkan $vulkan_version",
   "minApi": 30,
   "libraryName": "vulkan.ad07XX.so"
 }
